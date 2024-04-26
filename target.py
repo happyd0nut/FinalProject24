@@ -8,12 +8,18 @@ import time
 
 
 class Target():
-    def __init__(self, screen_width=600, screen_height=400, mode):
+    def __init__(self, color, screen_width=600, screen_height=400):
         
         self.screen_width = screen_width
         self.screen_height = screen_height
-        self.
-        self
+        self.x = 0
+        self.y = 0
+        self.color = color
+        self.respawn()
 
-    def __main__():
-        print()
+    def respawn(self):
+        self.x = random.randint(50, self.screen_width)
+        self.y = random.randint(50, self.screen_height)
+
+    def draw(self, image):
+        cv2.circle(image, (self.x, self.y), 25, self.color, 5)
