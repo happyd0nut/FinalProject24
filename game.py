@@ -23,12 +23,11 @@ class Game():
         self.targets = []
         self.score = 0
         
-        base_options = BaseOptions(model_asset_path="data/pose_landmarker.task")
+        base_options = BaseOptions(model_asset_path="data/hand_landmarker.task")
         options = PoseLandmarkerOptions(base_options = base_options, 
-                                        output_segmentation_masks = True,
-                                        running_mode = VisionRunningMode.VIDEO)
+                                        output_segmentation_masks = True)
         self.detector = PoseLandmarker.create_from_options(options)
-        
+
         self.video = cv2.VideoCapture(1)
 
     def draw_landmarks(self, image, detection_result):
@@ -51,7 +50,6 @@ class Game():
     def run(self):
 
         while self.video.isOpened():
-
             frame = self.video.read()[1]
             image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
@@ -62,9 +60,11 @@ class Game():
             results = self.detector.detect(to_detect)
 
             image =cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            cv2.imshow("Hand Tracking", image)
+            cv2.imshow("Pose Tracking", image)
 
-        
+            if cv2.waitKey(50) & 0xFF == ord('q'):
+                break
+
         self.video.release()
         cv2.destroyAllWindows()
 
