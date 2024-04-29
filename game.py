@@ -1,9 +1,10 @@
 import mediapipe as mp
+import numpy as np
 from mediapipe import solutions
 from mediapipe.framework.formats import landmark_pb2
+from mediapipe.tasks.python import vision
 import cv2
-import random 
-import numpy as np
+import random
 import time
 from target import Target
 
@@ -13,7 +14,6 @@ PoseLandmarker = mp.tasks.vision.PoseLandmarker
 PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
 VisionRunningMode = mp.tasks.vision.RunningMode
 DrawingUtil = mp.solutions.drawing_utils
-
 
 
 class Game():
@@ -58,14 +58,6 @@ class Game():
             # The image comes in mirrored - flip it
             image = cv2.flip(image, 1)
 
-            # Spawn enemy after x seconds
-            if self.mode == 2:
-                if (time.time() - start_time) > 3:
-                    start_time = time.time()
-                    self.enemies.append(Target(color=GREEN))
-                for enemy in self.enemies:
-                    enemy.draw(image=image)
-
             to_detect = mp.Image(image_format=mp.ImageFormat.SRGB, data=image)
             results = self.detector.detect(to_detect)
 
@@ -75,3 +67,8 @@ class Game():
         
         self.video.release()
         cv2.destroyAllWindows()
+
+
+        if __name__ == "__main__":
+            g = Game(0)
+            g.run()
