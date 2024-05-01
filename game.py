@@ -27,6 +27,8 @@ class Game():
         self.mode = mode
         self.targets = []
         self.score = 0
+
+        self.rh_target = Target(color=GREEN, quadrant=1)
         
         # Create PoseLandmarker detector
         base_options = BaseOptions(model_asset_path="data/pose_landmarker_full.task")
@@ -44,13 +46,13 @@ class Game():
         for the PoseLandmarker library in Google CoLab.
         """
         
-        # Get list of poses detected
+        # PoseLandmarker results gets a list of poses detected
         pose_landmarks_list = detection_result.pose_landmarks
 
         for idx in range(len(pose_landmarks_list)):
             pose_landmarks = pose_landmarks_list[idx]
 
-            # Draw the pose landmarks.
+            # Draw the pose landmarks
             pose_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
             pose_landmarks_proto.landmark.extend([
             landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in pose_landmarks])
@@ -62,13 +64,15 @@ class Game():
 
     def check_target_match(self, image, detection_result):
         
-        # Get image info and list of pose landmarks detected
+        # Get image info and list of pose landmarks detected from PoseLandmarker detector
         imageHeight, imageWidth = image.shape[:2]
         pose_landmarks_list = detection_result.pose_landmarks
+        pose_segmentation_list = detection_result.segmentation_masks
 
         # Loop through each pose landmark
         for idx in range(len(pose_landmarks_list)):
             pose_landmarks = pose_landmarks_list[idx]
+            pose_seg_image = pose_segmentation_list[idx]
             
             # Extract the right hand from pose landmark (R/L values flipped because of mirrored image)
             right_hand = pose_landmarks[PoseLandmarkPoints.LEFT_INDEX.value]
@@ -103,6 +107,9 @@ class Game():
             # Turn to RGB and flip image
             image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             image = cv2.flip(image, 1)
+
+            # Draw targets
+            self.rh_target.draw(image)
 
             # Use PoseLandmarker to detect poses
             to_detect = mp.Image(image_format=mp.ImageFormat.SRGB, data=image)
