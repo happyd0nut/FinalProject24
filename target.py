@@ -22,4 +22,5 @@ class Target():
         self.y = random.randint(50, self.screen_height)
 
     def draw(self, image):
-        cv2.circle(image, (self.x, self.y), 25, self.color, 5)
+        cv2.circle(image, center=(self.x, self.y), radius=25, color=self.color, thickness=5)
+        cv2.circle()

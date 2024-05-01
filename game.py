@@ -11,10 +11,15 @@ from target import Target
 # Library Constants
 BaseOptions = mp.tasks.BaseOptions
 PoseLandmarker = mp.tasks.vision.PoseLandmarker
+PoseLandmarkPoints = mp.solutions.pose.PoseLandmark
+PoseLandmarkConnections = mp.tasks.vision.PoseLandmarksConnections
 PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
 VisionRunningMode = mp.tasks.vision.RunningMode
 DrawingUtil = mp.solutions.drawing_utils
 
+RED = (250,0,0)
+GREEN = (0,250,0)
+BLUE = (0,0,250)
 
 class Game():
     def __init__(self, mode):
@@ -51,12 +56,41 @@ class Game():
                                         solutions.drawing_styles.get_default_pose_landmarks_style())
 
 
-    def label_structures(self, image, detection_result):
-        pass
+    def check_target_match(self, image, detection_result):
+        
+        # Get image info and list of pose landmarks detected
+        imageHeight, imageWidth = image.shape[:2]
+        pose_landmarks_list = detection_result.pose_landmarks
+
+        # Loop through each pose landmark
+        for idx in range(len(pose_landmarks_list)):
+            pose_landmarks = pose_landmarks_list[idx]
+            
+            # Extract the right hand from pose landmark (R/L values flipped because of mirrored image)
+            right_hand = pose_landmarks[PoseLandmarkPoints.LEFT_INDEX.value]
+            left_hand = pose_landmarks[PoseLandmarkPoints.RIGHT_INDEX.value]
+
+            # Get coordinates from desired points
+            pixelCoord_r_hand = DrawingUtil._normalized_to_pixel_coordinates(right_hand.x,
+                                                                      right_hand.y,
+                                                                      imageWidth,
+                                                                      imageHeight)
+            
+            pixelCoord_l_hand = DrawingUtil._normalized_to_pixel_coordinates(left_hand.x,
+                                                                      left_hand.y,
+                                                                      imageWidth,
+                                                                      imageHeight)
+            
+            # Draw circle around desired points
+            if pixelCoord_r_hand:
+                    cv2.circle(image, (pixelCoord_r_hand[0], pixelCoord_r_hand[1]), 50, RED, 5)
+
+            if pixelCoord_l_hand:
+                    cv2.circle(image, (pixelCoord_l_hand[0], pixelCoord_l_hand[1]), 50, BLUE, 5)
+
 
 
     def run(self):
-
         while self.video.isOpened():
             
             # Get frame of video feed
@@ -72,6 +106,7 @@ class Game():
 
             # Draw landmarks on poses
             self.draw_landmarks(image, results)
+            self.check_target_match(image, results)
 
             # Display image
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
