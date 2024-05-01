@@ -39,6 +39,10 @@ class Game():
 
 
     def draw_landmarks(self, image, detection_result):
+        """
+        Function adapted from MediaPipe's provided example code
+        for the PoseLandmarker library in Google CoLab.
+        """
         
         # Get list of poses detected
         pose_landmarks_list = detection_result.pose_landmarks
