@@ -4,7 +4,7 @@ from mediapipe import solutions
 from mediapipe.framework.formats import landmark_pb2
 from mediapipe.tasks.python import vision
 import cv2
-import random
+from pygame import mixer
 import time
 from target import Target
 
@@ -25,10 +25,12 @@ class Game():
     def __init__(self, mode):
         
         self.mode = mode
-        self.targets = []
         self.score = 0
 
-        self.rh_target = Target(color=GREEN, quadrant=1)
+        self.rh_target = Target(color=RED, quadrant=1)
+        self.lh_target = Target(color=BLUE, quadrant=2)
+
+        self.targets = [self.rh_target, self.lh_target]
         
         # Create PoseLandmarker detector
         base_options = BaseOptions(model_asset_path="data/pose_landmarker_full.task")
@@ -38,6 +40,12 @@ class Game():
 
         # Start video
         self.video = cv2.VideoCapture(1)
+
+        # Create Sound object
+        mixer.init()
+        mixer.music.load("data/music/just_dance_audio.mp3")
+        mixer.music.set_volume(0.7)
+        mixer.music.play()
 
 
     def draw_landmarks(self, image, detection_result):
@@ -83,26 +91,30 @@ class Game():
                                                                       right_hand.y,
                                                                       imageWidth,
                                                                       imageHeight)
-            
             pixelCoord_l_hand = DrawingUtil._normalized_to_pixel_coordinates(left_hand.x,
                                                                       left_hand.y,
                                                                       imageWidth,
                                                                       imageHeight)
             
-            # Draw circle around desired points
-            if pixelCoord_r_hand:
-                    cv2.circle(image, (pixelCoord_r_hand[0], pixelCoord_r_hand[1]), 50, RED, 5)
+            # Draw circle around desired points and check intercept
+            if pixelCoord_r_hand and pixelCoord_l_hand:
+                cv2.circle(image, (pixelCoord_r_hand[0], pixelCoord_r_hand[1]), 50, RED, 5)
+                cv2.circle(image, (pixelCoord_l_hand[0], pixelCoord_l_hand[1]), 50, BLUE, 5)
+                
+                if self.check_target_intercept(pixelCoord_r_hand[0], pixelCoord_r_hand[1], self.rh_target) and self.check_target_intercept(pixelCoord_l_hand[0], pixelCoord_l_hand[1], self.lh_target):
+                    self.score += 1
+                    for target in self.targets:
+                        target.respawn()
 
-            if pixelCoord_l_hand:
-                    cv2.circle(image, (pixelCoord_l_hand[0], pixelCoord_l_hand[1]), 50, BLUE, 5)
 
     def check_target_intercept(self, point_x, point_y, target):
-         
+
         target_x = target.x
         target_y = target.y
+
+        # Respawn target if point is hit
         if (point_x < target_x + 10 and point_x > target_x - 10) and (point_y < target_y + 10 and point_y > target_y - 10):
-            self.score += 1
-            target.respawn()
+            return True
          
          
 
@@ -116,8 +128,9 @@ class Game():
             image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             image = cv2.flip(image, 1)
 
-            # Draw targets
-            self.rh_target.draw(image)
+            # Draw all targets
+            for target in self.targets:
+                 target.draw(image)
 
             # Use PoseLandmarker to detect poses
             to_detect = mp.Image(image_format=mp.ImageFormat.SRGB, data=image)
