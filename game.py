@@ -96,7 +96,15 @@ class Game():
             if pixelCoord_l_hand:
                     cv2.circle(image, (pixelCoord_l_hand[0], pixelCoord_l_hand[1]), 50, BLUE, 5)
 
-
+    def check_target_intercept(self, point_x, point_y, target):
+         
+        target_x = target.x
+        target_y = target.y
+        if (point_x < target_x + 10 and point_x > target_x - 10) and (point_y < target_y + 10 and point_y > target_y - 10):
+            self.score += 1
+            target.respawn()
+         
+         
 
     def run(self):
         while self.video.isOpened():
