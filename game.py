@@ -18,8 +18,10 @@ VisionRunningMode = mp.tasks.vision.RunningMode
 DrawingUtil = mp.solutions.drawing_utils
 
 RED = (250,0,0)
+ORANGE = (255, 165, 0)
 GREEN = (0,250,0)
 BLUE = (0,0,250)
+PURPLE = (165, 0, 255)
 
 class Game():
     def __init__(self, mode):
@@ -29,21 +31,23 @@ class Game():
 
         self.rh_target = Target(color=RED, quadrant=1)
         self.lh_target = Target(color=BLUE, quadrant=2)
-        self.rf_target = Target(color=RED, quadrant=4)
-        self.lf_target = Target(color=BLUE, quadrant=3)
+        self.rf_target = Target(color=ORANGE, quadrant=4)
+        self.lf_target = Target(color=PURPLE, quadrant=3)
+        print(self.rf_target.x, self.rf_target.y)
+        print(self.lf_target.x, self.lf_target.y)
 
         self.targets = [self.rh_target, self.lh_target, self.rf_target, self.lf_target]
         
         # Create PoseLandmarker detector
-        base_options = BaseOptions(model_asset_path="data/pose_landmarker_full.task")
+        base_options = BaseOptions(model_asset_path="data/model/pose_landmarker_full.task")
         options = PoseLandmarkerOptions(base_options = base_options, num_poses = 2,
                                         output_segmentation_masks = True)
         self.detector = PoseLandmarker.create_from_options(options)
 
         # Start video
-        self.video = cv2.VideoCapture(1)
+        self.video = cv2.VideoCapture(0)
 
-        # Create Sound object
+        # Add music in background
         mixer.init()
         mixer.music.load("data/music/just_dance_audio.mp3")
         mixer.music.set_volume(0.7)
@@ -109,17 +113,18 @@ class Game():
                                                                       imageHeight)
             
             # Draw circle around desired points and check intercept
-            if pixelCoord_r_hand and pixelCoord_l_hand:
+            if pixelCoord_r_hand and pixelCoord_l_hand and pixelCoord_r_foot and pixelCoord_l_foot:
                 cv2.circle(image, (pixelCoord_r_hand[0], pixelCoord_r_hand[1]), 50, RED, 5)
                 cv2.circle(image, (pixelCoord_l_hand[0], pixelCoord_l_hand[1]), 50, BLUE, 5)
-                cv2.circle(image, (pixelCoord_r_foot[0], pixelCoord_r_foot[1]), 50, RED, 5)
-                cv2.circle(image, (pixelCoord_l_foot[0], pixelCoord_l_hand[1]), 50, BLUE, 5)
+                cv2.circle(image, (pixelCoord_r_foot[0], pixelCoord_r_foot[1]), 50, ORANGE, 5)
+                cv2.circle(image, (pixelCoord_l_foot[0], pixelCoord_l_foot[1]), 50, PURPLE, 5)
                 
                 r_hand_int = self.check_target_intercept(pixelCoord_r_hand[0], pixelCoord_r_hand[1], self.rh_target)
                 l_hand_int = self.check_target_intercept(pixelCoord_l_hand[0], pixelCoord_l_hand[1], self.lh_target)
                 r_foot_int = self.check_target_intercept(pixelCoord_r_foot[0], pixelCoord_r_foot[1], self.rf_target)
                 l_foot_int = self.check_target_intercept(pixelCoord_l_foot[0], pixelCoord_l_foot[1], self.lf_target)
 
+                
                 if r_hand_int and l_hand_int and r_foot_int and l_foot_int:
                     self.score += 1
                     for target in self.targets:
@@ -132,14 +137,22 @@ class Game():
         target_y = target.y
 
         # Respawn target if point is hit
-        if (point_x < target_x + 10 and point_x > target_x - 10) and (point_y < target_y + 10 and point_y > target_y - 10):
+        if (point_x < target_x + 30 and point_x > target_x - 30) and (point_y < target_y + 30 and point_y > target_y - 30):
             return True
          
          
 
     def run(self):
+
         while self.video.isOpened():
             
+
+            pic = cv2.imread('data/images/starpose.jpeg')
+            pic_formatted = mp.Image(image_format=mp.ImageFormat.SRGB, data=pic)
+            pic_results = self.detector.detect(pic_formatted)
+            self.draw_landmarks(pic, pic_results)
+            cv2.imshow("Image Detection", pic)
+
             # Get frame of video feed
             frame = self.video.read()[1]
 
@@ -158,6 +171,10 @@ class Game():
             # Draw landmarks on poses
             self.draw_landmarks(image, results)
             self.check_target_match(image, results)
+
+            # Display score
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            cv2.putText(image,str(self.score),(1000,50), font, fontScale=2, color=GREEN,thickness=2)
 
             # Display image
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)

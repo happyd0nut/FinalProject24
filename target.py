@@ -8,7 +8,7 @@ import time
 
 
 class Target():
-    def __init__(self, color, quadrant, screen_width=800, screen_height=1200):
+    def __init__(self, color, quadrant, screen_width=1200, screen_height=700):
         
         self.screen_width = screen_width
         self.screen_height = screen_height
@@ -20,17 +20,17 @@ class Target():
 
     def respawn(self):
         if self.quadrant == 2:
-            self.x = random.randint(50, self.screen_width/2)
+            self.x = random.randint(300, self.screen_width/2)
             self.y = random.randint(50, self.screen_height/2)
         elif self.quadrant == 1:
-            self.x = random.randint(self.screen_width/2, self.screen_width)
+            self.x = random.randint(self.screen_width/2, self.screen_width/2 + 300)
             self.y = random.randint(50, self.screen_height/2)
         elif self.quadrant == 4:
             self.x = random.randint(self.screen_width/2, self.screen_width)
-            self.y = random.randint(self.screen_height/2, self.screen_height)
+            self.y = random.randint(self.screen_height-70, self.screen_height-20)
         elif self.quadrant == 3:
             self.x = random.randint(50, self.screen_width/2)
-            self.y = random.randint(self.screen_height/2, self.screen_height)
+            self.y = random.randint(self.screen_height-70, self.screen_height-20)
         else:
             self.x = random.randint(50, self.screen_width)
             self.y = random.randint(50, self.screen_height)
