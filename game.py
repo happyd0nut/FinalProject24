@@ -29,8 +29,10 @@ class Game():
 
         self.rh_target = Target(color=RED, quadrant=1)
         self.lh_target = Target(color=BLUE, quadrant=2)
+        self.rf_target = Target(color=RED, quadrant=4)
+        self.lf_target = Target(color=BLUE, quadrant=3)
 
-        self.targets = [self.rh_target, self.lh_target]
+        self.targets = [self.rh_target, self.lh_target, self.rf_target, self.lf_target]
         
         # Create PoseLandmarker detector
         base_options = BaseOptions(model_asset_path="data/pose_landmarker_full.task")
@@ -85,6 +87,8 @@ class Game():
             # Extract the right hand from pose landmark (R/L values flipped because of mirrored image)
             right_hand = pose_landmarks[PoseLandmarkPoints.LEFT_INDEX.value]
             left_hand = pose_landmarks[PoseLandmarkPoints.RIGHT_INDEX.value]
+            right_foot = pose_landmarks[PoseLandmarkPoints.LEFT_ANKLE.value]
+            left_foot = pose_landmarks[PoseLandmarkPoints.RIGHT_ANKLE.value]
 
             # Get coordinates from desired points
             pixelCoord_r_hand = DrawingUtil._normalized_to_pixel_coordinates(right_hand.x,
@@ -95,13 +99,28 @@ class Game():
                                                                       left_hand.y,
                                                                       imageWidth,
                                                                       imageHeight)
+            pixelCoord_r_foot = DrawingUtil._normalized_to_pixel_coordinates(right_foot.x,
+                                                                      right_foot.y,
+                                                                      imageWidth,
+                                                                      imageHeight)
+            pixelCoord_l_foot = DrawingUtil._normalized_to_pixel_coordinates(left_foot.x,
+                                                                      left_foot.y,
+                                                                      imageWidth,
+                                                                      imageHeight)
             
             # Draw circle around desired points and check intercept
             if pixelCoord_r_hand and pixelCoord_l_hand:
                 cv2.circle(image, (pixelCoord_r_hand[0], pixelCoord_r_hand[1]), 50, RED, 5)
                 cv2.circle(image, (pixelCoord_l_hand[0], pixelCoord_l_hand[1]), 50, BLUE, 5)
+                cv2.circle(image, (pixelCoord_r_foot[0], pixelCoord_r_foot[1]), 50, RED, 5)
+                cv2.circle(image, (pixelCoord_l_foot[0], pixelCoord_l_hand[1]), 50, BLUE, 5)
                 
-                if self.check_target_intercept(pixelCoord_r_hand[0], pixelCoord_r_hand[1], self.rh_target) and self.check_target_intercept(pixelCoord_l_hand[0], pixelCoord_l_hand[1], self.lh_target):
+                r_hand_int = self.check_target_intercept(pixelCoord_r_hand[0], pixelCoord_r_hand[1], self.rh_target)
+                l_hand_int = self.check_target_intercept(pixelCoord_l_hand[0], pixelCoord_l_hand[1], self.lh_target)
+                r_foot_int = self.check_target_intercept(pixelCoord_r_foot[0], pixelCoord_r_foot[1], self.rf_target)
+                l_foot_int = self.check_target_intercept(pixelCoord_l_foot[0], pixelCoord_l_foot[1], self.lf_target)
+
+                if r_hand_int and l_hand_int and r_foot_int and l_foot_int:
                     self.score += 1
                     for target in self.targets:
                         target.respawn()
