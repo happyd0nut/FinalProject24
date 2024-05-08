@@ -1,11 +1,13 @@
 import mediapipe as mp
 import numpy as np
+import pandas as pd
 from mediapipe import solutions
 from mediapipe.framework.formats import landmark_pb2
 from mediapipe.tasks.python import vision
 import cv2
 from pygame import mixer
-import time
+import os
+
 from target import Target
 
 # Library Constants
@@ -45,7 +47,7 @@ class Game():
         self.detector = PoseLandmarker.create_from_options(options)
 
         # Start video
-        self.video = cv2.VideoCapture(0)
+        self.video = cv2.VideoCapture(1)
 
         # Initialize mixer
         mixer.init()
@@ -78,8 +80,53 @@ class Game():
                                         solutions.pose.POSE_CONNECTIONS,
                                         solutions.drawing_styles.get_default_pose_landmarks_style())
             
-    
+    def image_pose_detector(self):
+        
+        save_filepath = "data/csv/image_pose_data.csv"
 
+        # Create dictionary holding coordinates for each landmark point
+        pose_images_coordinates = {"RHX" : [], 
+                                   "RHY" : [],
+                                   "LHX" : [],
+                                   "LHY" : [],
+                                   "RFX" : [], 
+                                   "RFY" : [],
+                                   "LFX" : [],
+                                   "LFY" : []}
+
+        directory_str = "data/images"
+        directory = os.fsencode(directory_str)
+        
+        # Loop through each image in folder "images"
+        for file in os.listdir(directory):
+            
+            image_filename = os.fsdecode(file)
+            image = cv2.imread("data/images/" + image_filename)
+            formatted_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=image)
+            results = self.detector.detect(formatted_image)
+            self.draw_landmarks(image, results)
+
+            pose_landmarks_list = results.pose_landmarks
+            pose_landmarks = pose_landmarks_list[0]
+            
+            right_hand = pose_landmarks[PoseLandmarkPoints.LEFT_INDEX.value]
+            left_hand = pose_landmarks[PoseLandmarkPoints.RIGHT_INDEX.value]
+            right_foot = pose_landmarks[PoseLandmarkPoints.LEFT_ANKLE.value]
+            left_foot = pose_landmarks[PoseLandmarkPoints.RIGHT_ANKLE.value]
+
+            # Save coordinates in dictionary
+            pose_images_coordinates["RHX"].append(right_hand.x)
+            pose_images_coordinates["RHY"].append(right_hand.y)
+            pose_images_coordinates["LHX"].append(left_hand.x)
+            pose_images_coordinates["LHY"].append(left_hand.y)
+            pose_images_coordinates["RFX"].append(right_foot.x)
+            pose_images_coordinates["RFY"].append(right_foot.y)
+            pose_images_coordinates["LFX"].append(left_foot.x)
+            pose_images_coordinates["LFY"].append(left_foot.y)
+        
+        df = pd.DataFrame.from_dict(pose_images_coordinates)
+        df.to_csv(save_filepath)
+    
 
     def check_target_match(self, image, detection_result):
         
@@ -126,7 +173,6 @@ class Game():
                 l_hand_int = self.check_target_intercept(pixelCoord_l_hand[0], pixelCoord_l_hand[1], self.lh_target)
                 r_foot_int = self.check_target_intercept(pixelCoord_r_foot[0], pixelCoord_r_foot[1], self.rf_target)
                 l_foot_int = self.check_target_intercept(pixelCoord_l_foot[0], pixelCoord_l_foot[1], self.lf_target)
-
                 
                 if r_hand_int and l_hand_int and r_foot_int and l_foot_int:
                     self.score += 1
@@ -147,14 +193,11 @@ class Game():
 
     def run(self):
 
-        while self.video.isOpened():
-            
-            pic = cv2.imread('data/images/starpose.jpeg')
-            pic_formatted = mp.Image(image_format=mp.ImageFormat.SRGB, data=pic)
-            pic_results = self.detector.detect(pic_formatted)
-            self.draw_landmarks(pic, pic_results)
-            cv2.imshow("Image Detection", pic)
+        # Testing functionality
+        self.image_pose_detector()
 
+        while self.video.isOpened():
+    
             # Get frame of video feed
             frame = self.video.read()[1]
 
@@ -171,8 +214,8 @@ class Game():
             results = self.detector.detect(to_detect)
 
             # Draw landmarks on poses
-            self.draw_landmarks(image, results)
-            self.check_target_match(image, results)
+            # self.draw_landmarks(image, results)
+            # self.check_target_match(image, results)
 
             # Display score
             cv2.rectangle(image, (1080,50), (1250,120), color=WHITE, thickness=-1)
