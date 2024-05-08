@@ -22,10 +22,13 @@ ORANGE = (255, 165, 0)
 GREEN = (0,250,0)
 BLUE = (0,0,250)
 PURPLE = (165, 0, 255)
+WHITE = (255,255,255)
 
 class Game():
+
     def __init__(self, mode):
         
+        # Initializing instance variables
         self.mode = mode
         self.score = 0
 
@@ -33,25 +36,22 @@ class Game():
         self.lh_target = Target(color=BLUE, quadrant=2)
         self.rf_target = Target(color=ORANGE, quadrant=4)
         self.lf_target = Target(color=PURPLE, quadrant=3)
-        print(self.rf_target.x, self.rf_target.y)
-        print(self.lf_target.x, self.lf_target.y)
-
         self.targets = [self.rh_target, self.lh_target, self.rf_target, self.lf_target]
         
         # Create PoseLandmarker detector
         base_options = BaseOptions(model_asset_path="data/model/pose_landmarker_full.task")
-        options = PoseLandmarkerOptions(base_options = base_options, num_poses = 2,
+        options = PoseLandmarkerOptions(base_options = base_options, num_poses = 1,
                                         output_segmentation_masks = True)
         self.detector = PoseLandmarker.create_from_options(options)
 
         # Start video
         self.video = cv2.VideoCapture(0)
 
-        # Add music in background
+        # Initialize mixer
         mixer.init()
-        mixer.music.load("data/music/just_dance_audio.mp3")
+        mixer.music.load("data/music/song1.mp3")
         mixer.music.set_volume(0.7)
-        mixer.music.play()
+        mixer.music.play(-1)
 
 
     def draw_landmarks(self, image, detection_result):
@@ -62,9 +62,12 @@ class Game():
         
         # PoseLandmarker results gets a list of poses detected
         pose_landmarks_list = detection_result.pose_landmarks
+        pose_segmentation_list = detection_result.segmentation_masks
 
         for idx in range(len(pose_landmarks_list)):
             pose_landmarks = pose_landmarks_list[idx]
+            pose_seg_mask = pose_segmentation_list[idx].numpy_view()
+            pose_visual_mask = np.repeat(pose_seg_mask[:, :, np.newaxis], 3, axis=2) * 255
 
             # Draw the pose landmarks
             pose_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
@@ -74,6 +77,8 @@ class Game():
                                         pose_landmarks_proto,
                                         solutions.pose.POSE_CONNECTIONS,
                                         solutions.drawing_styles.get_default_pose_landmarks_style())
+            
+    
 
 
     def check_target_match(self, image, detection_result):
@@ -81,12 +86,10 @@ class Game():
         # Get image info and list of pose landmarks detected from PoseLandmarker detector
         imageHeight, imageWidth = image.shape[:2]
         pose_landmarks_list = detection_result.pose_landmarks
-        pose_segmentation_list = detection_result.segmentation_masks
 
         # Loop through each pose landmark
         for idx in range(len(pose_landmarks_list)):
             pose_landmarks = pose_landmarks_list[idx]
-            pose_seg_image = pose_segmentation_list[idx]
             
             # Extract the right hand from pose landmark (R/L values flipped because of mirrored image)
             right_hand = pose_landmarks[PoseLandmarkPoints.LEFT_INDEX.value]
@@ -114,10 +117,10 @@ class Game():
             
             # Draw circle around desired points and check intercept
             if pixelCoord_r_hand and pixelCoord_l_hand and pixelCoord_r_foot and pixelCoord_l_foot:
-                cv2.circle(image, (pixelCoord_r_hand[0], pixelCoord_r_hand[1]), 50, RED, 5)
-                cv2.circle(image, (pixelCoord_l_hand[0], pixelCoord_l_hand[1]), 50, BLUE, 5)
-                cv2.circle(image, (pixelCoord_r_foot[0], pixelCoord_r_foot[1]), 50, ORANGE, 5)
-                cv2.circle(image, (pixelCoord_l_foot[0], pixelCoord_l_foot[1]), 50, PURPLE, 5)
+                cv2.circle(image, (pixelCoord_r_hand[0], pixelCoord_r_hand[1]), 40, RED, 5)
+                cv2.circle(image, (pixelCoord_l_hand[0], pixelCoord_l_hand[1]), 40, BLUE, 5)
+                cv2.circle(image, (pixelCoord_r_foot[0], pixelCoord_r_foot[1]), 40, ORANGE, 5)
+                cv2.circle(image, (pixelCoord_l_foot[0], pixelCoord_l_foot[1]), 40, PURPLE, 5)
                 
                 r_hand_int = self.check_target_intercept(pixelCoord_r_hand[0], pixelCoord_r_hand[1], self.rh_target)
                 l_hand_int = self.check_target_intercept(pixelCoord_l_hand[0], pixelCoord_l_hand[1], self.lh_target)
@@ -146,7 +149,6 @@ class Game():
 
         while self.video.isOpened():
             
-
             pic = cv2.imread('data/images/starpose.jpeg')
             pic_formatted = mp.Image(image_format=mp.ImageFormat.SRGB, data=pic)
             pic_results = self.detector.detect(pic_formatted)
@@ -173,9 +175,10 @@ class Game():
             self.check_target_match(image, results)
 
             # Display score
+            cv2.rectangle(image, (1080,50), (1250,120), color=WHITE, thickness=-1)
             font = cv2.FONT_HERSHEY_SIMPLEX
-            cv2.putText(image,str(self.score),(1000,50), font, fontScale=2, color=GREEN,thickness=2)
-
+            cv2.putText(image,"Score: " + str(self.score),(1090,105), font, fontScale=1, color=GREEN, thickness=2)
+            
             # Display image
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             cv2.imshow("Pose Tracking", image)
