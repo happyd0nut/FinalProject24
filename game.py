@@ -29,15 +29,23 @@ WHITE = (255,255,255)
 class Game():
 
     def __init__(self, mode):
+
+        """
+        Initializes all four targets, PoseLandmarker detector, the mixer, and VideoCapture
+        for the game Just Dance.
+        Args:
+            mode: input "manual" or "random", determines whether the targets are generated
+            randomly or in accordance with specific poses from images
+        """
         
         # Initializing instance variables
         self.mode = mode
         self.score = 0
 
-        self.rh_target = Target(color=RED, quadrant=1)
-        self.lh_target = Target(color=BLUE, quadrant=2)
-        self.rf_target = Target(color=ORANGE, quadrant=4)
-        self.lf_target = Target(color=PURPLE, quadrant=3)
+        self.rh_target = Target(color=RED, quadrant=1, respwan_type=self.mode)
+        self.lh_target = Target(color=BLUE, quadrant=2, respwan_type=self.mode)
+        self.rf_target = Target(color=ORANGE, quadrant=4, respwan_type=self.mode)
+        self.lf_target = Target(color=PURPLE, quadrant=3, respwan_type=self.mode)
         self.targets = [self.rh_target, self.lh_target, self.rf_target, self.lf_target]
         
         # Create PoseLandmarker detector
@@ -47,7 +55,7 @@ class Game():
         self.detector = PoseLandmarker.create_from_options(options)
 
         # Start video
-        self.video = cv2.VideoCapture(1)
+        self.video = cv2.VideoCapture(0)
 
         # Initialize mixer
         mixer.init()
@@ -57,9 +65,14 @@ class Game():
 
 
     def draw_landmarks(self, image, detection_result):
+
         """
-        Function adapted from MediaPipe's provided example code
-        for the PoseLandmarker library in Google CoLab.
+        Function adapted from MediaPipe's provided example code for the PoseLandmarker 
+        library in Google CoLab.
+        Args:
+            image: the image frame in which to draw the landmarks on
+            detection_result: the outputed data of the PoseLandmarker detector after
+            processing the image frame
         """
         
         # PoseLandmarker results gets a list of poses detected
@@ -80,7 +93,15 @@ class Game():
                                         solutions.pose.POSE_CONNECTIONS,
                                         solutions.drawing_styles.get_default_pose_landmarks_style())
             
-    def image_pose_detector(self):
+    def image_pose_to_csv(self):
+
+        """
+        Processes all images in the "data/images" folder and detects PoseLandmarker 
+        data from each image. Saves its normalized coordinates into a dictionary then
+        DataFrame then CSV file into the "data/csv" folder.
+        Args:
+            None
+        """
         
         save_filepath = "data/csv/image_pose_data.csv"
 
@@ -92,7 +113,8 @@ class Game():
                                    "RFX" : [], 
                                    "RFY" : [],
                                    "LFX" : [],
-                                   "LFY" : []}
+                                   "LFY" : [],
+                                   "image_size" : []}
 
         directory_str = "data/images"
         directory = os.fsencode(directory_str)
@@ -123,9 +145,29 @@ class Game():
             pose_images_coordinates["RFY"].append(right_foot.y)
             pose_images_coordinates["LFX"].append(left_foot.x)
             pose_images_coordinates["LFY"].append(left_foot.y)
-        
+            pose_images_coordinates["image_size"].append(image.shape[:2])
+            
+        # Save dictionary to CSV file
         df = pd.DataFrame.from_dict(pose_images_coordinates)
         df.to_csv(save_filepath)
+
+        df = pd.read_csv("data/csv/image_pose_data.csv")
+        cols_list = df.columns
+        row_idx = self.score - 1
+
+        # Rescale the dimensions the referenced pose image to the window height
+        img_dims = df.iloc[row_idx][-1]
+        print(type(img_dims))
+        # scale = 700/int(img_dims[1])
+        # scaled_img_dims = (img_dims[0]*scale, img_dims[1]*scale)
+        
+        # # Respawn all targets at cooresponding coordinates
+        # for col_idx in range(1, len(cols_list), 2):
+        #     x_norm_coord = df.iloc[row_idx, col_idx]
+        #     y_norm_coord = df.iloc[row_idx, col_idx+1]
+        #     x_coord = DrawingUtil._normalized_to_pixel_coordinates(x_norm_coord, 0, scaled_img_dims[0], scaled_img_dims[1])
+        #     y_coord = DrawingUtil._normalized_to_pixel_coordinates(0, y_norm_coord, scaled_img_dims[0], scaled_img_dims[1])
+        #     print((x_coord,y_coord))
     
 
     def check_target_match(self, image, detection_result):
@@ -174,10 +216,32 @@ class Game():
                 r_foot_int = self.check_target_intercept(pixelCoord_r_foot[0], pixelCoord_r_foot[1], self.rf_target)
                 l_foot_int = self.check_target_intercept(pixelCoord_l_foot[0], pixelCoord_l_foot[1], self.lf_target)
                 
+                # Respawn target if all targets are hit
                 if r_hand_int and l_hand_int and r_foot_int and l_foot_int:
                     self.score += 1
-                    for target in self.targets:
-                        target.respawn()
+                    
+                    if self.mode == "manual":
+                        df = pd.read_csv("data/csv/image_pose_data.csv")
+                        cols_list = df.columns
+                        row_idx = self.score - 1
+
+                        # Rescale the dimensions the referenced pose image to the window height
+                        img_dims = df.iloc[row_idx][-1]
+                        scale = imageHeight/img_dims[1]
+                        scaled_img_dims = (img_dims[0]*scale, img_dims[1]*scale)
+                        
+                        # Respawn all targets at cooresponding coordinates
+                        for col_idx in range(1, len(cols_list), 2):
+                            x_norm_coord = df.iloc[row_idx, col_idx]
+                            y_norm_coord = df.iloc[row_idx, col_idx+1]
+                            x_coord = DrawingUtil._normalized_to_pixel_coordinates(x_norm_coord, 0, scaled_img_dims[0], scaled_img_dims[1])
+                            y_coord = DrawingUtil._normalized_to_pixel_coordinates(0, y_norm_coord, scaled_img_dims[0], scaled_img_dims[1])
+                            print((x_coord,y_coord))
+                            self.targets[int((col_idx-1)/2)].respawn(x_coord,y_coord)
+                    
+                    if self.mode == "random":
+                        for target in self.targets:
+                            target.respawn()
 
 
     def check_target_intercept(self, point_x, point_y, target):
@@ -189,12 +253,11 @@ class Game():
         if (point_x < target_x + 30 and point_x > target_x - 30) and (point_y < target_y + 30 and point_y > target_y - 30):
             return True
          
-         
 
     def run(self):
 
         # Testing functionality
-        self.image_pose_detector()
+        self.image_pose_to_csv()
 
         while self.video.isOpened():
     
@@ -235,5 +298,5 @@ class Game():
 
 
 if __name__ == "__main__":
-    g = Game(0)
+    g = Game(mode="manual")
     g.run()
