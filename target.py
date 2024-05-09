@@ -19,31 +19,29 @@ class Target():
         self.color = color
         self.quadrant = quadrant
         self.respawn_type = respwan_type
-        self.respawn()
+        self.respawn_random()
+
+    def respawn(self, x, y):
+        self.x = x
+        self.y = y
 
 
-    def respawn(self, x=0, y=0):
-
-        if self.respawn_type == "manual":
-            self.x = x
-            self.y = y
-
+    def respawn_random(self):
+        if self.quadrant == 2:
+            self.x = random.randint(300, self.screen_width/2)
+            self.y = random.randint(50, self.screen_height/2)
+        elif self.quadrant == 1:
+            self.x = random.randint(self.screen_width/2, self.screen_width/2 + 300)
+            self.y = random.randint(50, self.screen_height/2)
+        elif self.quadrant == 4:
+            self.x = random.randint(self.screen_width/2, self.screen_width-300)
+            self.y = random.randint(self.screen_height-70, self.screen_height-30)
+        elif self.quadrant == 3:
+            self.x = random.randint(350, self.screen_width/2)
+            self.y = random.randint(self.screen_height-70, self.screen_height-30)
         else:
-            if self.quadrant == 2:
-                self.x = random.randint(300, self.screen_width/2)
-                self.y = random.randint(50, self.screen_height/2)
-            elif self.quadrant == 1:
-                self.x = random.randint(self.screen_width/2, self.screen_width/2 + 300)
-                self.y = random.randint(50, self.screen_height/2)
-            elif self.quadrant == 4:
-                self.x = random.randint(self.screen_width/2, self.screen_width-300)
-                self.y = random.randint(self.screen_height-70, self.screen_height-30)
-            elif self.quadrant == 3:
-                self.x = random.randint(350, self.screen_width/2)
-                self.y = random.randint(self.screen_height-70, self.screen_height-30)
-            else:
-                self.x = random.randint(50, self.screen_width)
-                self.y = random.randint(50, self.screen_height)
+            self.x = random.randint(50, self.screen_width)
+            self.y = random.randint(50, self.screen_height)
 
 
     def draw(self, image):
