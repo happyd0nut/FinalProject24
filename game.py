@@ -42,6 +42,7 @@ class Game():
         # Initializing instance variables
         self.mode = mode
         self.score = 0
+        self.row_pose_idx = 0
 
         self.rh_target = Target(color=RED, quadrant=1, respwan_type=self.mode)
         self.lh_target = Target(color=BLUE, quadrant=2, respwan_type=self.mode)
@@ -207,17 +208,20 @@ class Game():
                         df = pd.read_csv("data/csv/image_pose_data.csv")
                         df["image_size"] = df["image_size"].apply(ast.literal_eval)
                         cols_list = df.columns
-                        row_idx = self.score - 1
+                        
+                        self.row_pose_idx += 1
+                        if self.row_pose_idx >= df.shape[0]:
+                            self.row_pose_idx = 0
 
                         # Rescale the dimensions the referenced pose image to the window height
-                        img_dims = df.iloc[row_idx][-1]
+                        img_dims = df.iloc[self.row_pose_idx][-1]
                         scale = 700/int(img_dims[0])
                         scaled_img_dims = (img_dims[0]*scale, img_dims[1]*scale)
                         
                         # Respawn all targets at cooresponding coordinates
                         for col_idx in range(1, len(cols_list)-1, 2):
-                            x_norm_coord = df.iloc[row_idx, col_idx]
-                            y_norm_coord = df.iloc[row_idx, col_idx+1]
+                            x_norm_coord = df.iloc[self.row_pose_idx, col_idx]
+                            y_norm_coord = df.iloc[self.row_pose_idx, col_idx+1]
                             x_coord = DrawingUtil._normalized_to_pixel_coordinates(x_norm_coord, 0, scaled_img_dims[1], scaled_img_dims[0])[0]
                             y_coord = DrawingUtil._normalized_to_pixel_coordinates(0, y_norm_coord, scaled_img_dims[1], scaled_img_dims[0])[1]
                             
