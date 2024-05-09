@@ -155,6 +155,17 @@ class Game():
     
 
     def check_target_match(self, image, detection_result):
+
+        """
+        Adapted from Ms. Namasivayam's code from Finger Tracking Game. Draws
+        a circle around PoseLandmarkPoints at hands and feet and respawns
+        all four targets when targets are simultaneously intercepted by the
+        corresponding body part.
+        Args:
+            image: the image frame in which the VideoCapture is displayed
+            detection_result: the outputed data of the PoseLandmarker detector after
+            processing the image frame
+        """
         
         # Get image info and list of pose landmarks detected from PoseLandmarker detector
         imageHeight, imageWidth = image.shape[:2]
@@ -234,6 +245,15 @@ class Game():
 
 
     def check_target_intercept(self, point_x, point_y, target):
+
+        """
+        Returns true if the circle of the PoseLandmarkPoint for a given body part
+        intercepts with the correponding target.
+        Args:
+            point_x: the x-value for the center of the PoseLandmarkPoint
+            point_y: the y-value for the center of the PoseLandmarkPoint
+            target: the Target object corresponding to the PoseLandmarkPoint
+        """
 
         target_x = target.x
         target_y = target.y
